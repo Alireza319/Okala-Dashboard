@@ -1,0 +1,20 @@
+{
+  "name": "okala-corner-dashboard",
+  "version": "0.1.0",
+  "description": "OKALA Corner Performance & Bonus Management Dashboard",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "node --watch backend/server.js",
+    "test": "node --test backend/tests/*.test.js"
+  },
+  "engines": {
+    "node": ">=22.5.0"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5"
+  }
+}
