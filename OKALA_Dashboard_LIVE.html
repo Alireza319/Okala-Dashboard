@@ -1,0 +1,822 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>داشبورد مدیریت وندور OKALA</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vazirmatn@33.0.3/Vazirmatn-font-face.css">
+<style>
+:root{
+  --red:#b10f2e; --red2:#e23d57;
+  --ink:#23191b; --muted:#77676b; --line:#eadfe2; --bg:#f8f5f6; --card:#fff;
+  --green:#17824d; --amber:#b8790f; --shadow:0 8px 24px rgba(64,15,25,.07);
+  --ok:#17824d; --warn:#b8790f; --err:#b10f2e;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:'IRANSansX','Vazirmatn',Tahoma,'Segoe UI',Arial,sans-serif;font-size:13px;line-height:1.6}
+
+/* ---------- header ---------- */
+.top{position:sticky;top:0;z-index:200;background:linear-gradient(105deg,#8c0925,#c51b3d);color:#fff;
+  padding:14px 22px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px}
+.brand{font-size:19px;font-weight:900}
+.brand small{display:block;font-size:11px;opacity:.85;margin-top:3px;font-weight:400}
+.top-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.btn{border:0;border-radius:10px;padding:9px 14px;cursor:pointer;font-weight:800;font-family:inherit;font-size:12.5px;transition:transform .12s ease}
+.btn:active{transform:scale(.97)}
+.btn.light{background:#fff;color:var(--red)}
+.btn.ghost{background:rgba(255,255,255,.14);color:#fff}
+.btn:disabled{opacity:.6;cursor:wait}
+.updated-at{font-size:11px;opacity:.9}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,255,255,.5);border-top-color:#fff;border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px;margin-left:6px}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* ---------- data status ---------- */
+.status-bar{display:flex;gap:8px;flex-wrap:wrap;padding:10px 20px;background:#fff;border-bottom:1px solid var(--line)}
+.status-chip{display:flex;align-items:center;gap:7px;font-size:11.5px;padding:6px 11px;border-radius:20px;border:1px solid var(--line);background:#faf7f8}
+.status-dot{width:8px;height:8px;border-radius:50%;flex:none}
+.status-chip.ok .status-dot{background:var(--ok)}
+.status-chip.err .status-dot{background:var(--err)}
+.status-chip.loading .status-dot{background:var(--amber);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.3}}
+.status-chip b{font-weight:800}
+.status-chip .err-detail{color:var(--err);font-weight:700}
+
+/* ---------- filters ---------- */
+.filters{position:sticky;top:64px;z-index:150;background:#fff;border-bottom:1px solid var(--line);padding:12px 20px;
+  display:grid;grid-template-columns:repeat(6,minmax(140px,1fr));gap:10px}
+.f label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px;font-weight:700}
+.f select,.f input{width:100%;height:36px;border:1px solid #d8cacc;border-radius:9px;padding:0 10px;outline:0;font-family:inherit;font-size:12.5px;background:#fff}
+
+main{max-width:1500px;margin:auto;padding:18px}
+.section{margin-bottom:26px}
+.section-title{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.section-title h2{margin:0;font-size:17px}
+.hint{color:var(--muted);font-size:11.5px}
+
+/* ---------- kpi cards ---------- */
+.cards{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:var(--shadow)}
+.kpi .name{font-weight:800;color:var(--muted);font-size:11.5px}
+.kpi .value{font-size:23px;font-weight:900;margin:8px 0 2px}
+.kpi .sub{font-size:11px;color:var(--muted)}
+.kpi.warn .value{color:var(--red)}
+.kpi.good .value{color:var(--green)}
+
+/* ---------- charts ---------- */
+.chart-row{display:grid;grid-template-columns:1.2fr .8fr;gap:12px;margin-bottom:12px}
+.chart-row.thirds{grid-template-columns:1fr 1fr 1fr}
+.chart-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:var(--shadow)}
+.chart-card h3{margin:0 0 10px;font-size:13.5px}
+.chart-wrap{height:280px;position:relative}
+
+/* ---------- tables ---------- */
+.table-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:var(--shadow);overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{padding:8px 9px;text-align:center;white-space:nowrap;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:800;cursor:pointer;user-select:none;position:sticky;top:0;background:#fff}
+th.sort-asc:after{content:" ▲"}
+th.sort-desc:after{content:" ▼"}
+tbody tr:hover{background:#fff6f7}
+td.name{text-align:right;font-weight:700}
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-weight:800;font-size:11px}
+.badge.g-A{background:#e5f4ec;color:var(--green)}
+.badge.g-B{background:#fdf3e2;color:var(--amber)}
+.badge.g-C{background:#fbe6e9;color:var(--red)}
+.badge.g-x{background:#f1eceb;color:var(--muted)}
+.repeat-flag{color:var(--red);font-weight:800}
+
+/* ---------- map ---------- */
+#map{height:480px;border-radius:14px;overflow:hidden;border:1px solid var(--line)}
+.map-controls{display:flex;gap:14px;align-items:center;margin-bottom:10px;flex-wrap:wrap;font-size:12px}
+.map-controls label{display:flex;gap:6px;align-items:center;cursor:pointer}
+.legend-dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+
+/* ---------- live & churn ---------- */
+.lc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.lc-list{max-height:260px;overflow:auto}
+
+.empty-note{padding:30px;text-align:center;color:var(--muted)}
+footer{text-align:center;color:var(--muted);font-size:11px;padding:20px}
+
+@media (max-width:1100px){
+  .filters{grid-template-columns:repeat(3,1fr)}
+  .cards{grid-template-columns:repeat(3,1fr)}
+  .chart-row,.chart-row.thirds{grid-template-columns:1fr}
+  .lc-grid{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="brand">داشبورد مدیریت و عملکرد وندور OKALA
+    <small>دیتا مستقیم از گوگل‌شیت زنده — بدون Apps Script، بدون snapshot</small>
+  </div>
+  <div class="top-right">
+    <span class="updated-at" id="updatedAt">—</span>
+    <button class="btn light" id="refreshBtn" onclick="loadAll()">🔄 رفرش دیتا</button>
+  </div>
+</div>
+
+<div class="status-bar" id="statusBar"></div>
+
+<div class="filters">
+  <div class="f">
+    <label>هفته</label>
+    <select id="fWeek"></select>
+  </div>
+  <div class="f">
+    <label>ایجنت</label>
+    <select id="fAgent"><option value="">همه</option></select>
+  </div>
+  <div class="f">
+    <label>منطقه مارکتینگی</label>
+    <select id="fArea"><option value="">همه</option></select>
+  </div>
+  <div class="f">
+    <label>سگمنت</label>
+    <select id="fSeg"><option value="">همه</option></select>
+  </div>
+  <div class="f">
+    <label>وضعیت</label>
+    <select id="fLive">
+      <option value="">همه</option>
+      <option value="live">فقط فعال (Live)</option>
+      <option value="churn">فقط چرن‌شده</option>
+    </select>
+  </div>
+  <div class="f">
+    <label>جست‌وجوی وندور</label>
+    <input id="fSearch" placeholder="نام مارکت…">
+  </div>
+</div>
+
+<main>
+
+  <div class="section">
+    <div class="section-title"><h2>شاخص‌های کلیدی هفته انتخاب‌شده</h2><span class="hint" id="kpiHint"></span></div>
+    <div class="cards" id="kpiCards"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title"><h2>روند هفتگی</h2><span class="hint">درصدها از جمع کل رخدادها محاسبه می‌شن، نه میانگین ستون درصد — تا با تغییر تعداد سفارش هر هفته اریب نشه</span></div>
+    <div class="chart-row">
+      <div class="chart-card"><h3>گراس سفارش و OSR٪ در طول زمان</h3><div class="chart-wrap"><canvas id="chartTrendGross"></canvas></div></div>
+      <div class="chart-card"><h3>روند کنسل٪ / مرجوعی٪ / NFC٪ / شکایت٪</h3><div class="chart-wrap"><canvas id="chartTrendRates"></canvas></div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title"><h2>تفکیک مسئولیت (هفته انتخاب‌شده)</h2></div>
+    <div class="chart-row thirds">
+      <div class="chart-card"><h3>کنسلی — لجستیک / اوکالا / مشتری</h3><div class="chart-wrap"><canvas id="chartCancelSide"></canvas></div></div>
+      <div class="chart-card"><h3>مرجوعی — لجستیک / اوکالا / مشتری / وندور</h3><div class="chart-wrap"><canvas id="chartReturnSide"></canvas></div></div>
+      <div class="chart-card"><h3>شکایت/جبران خسارت — لجستیک / اوکالا / مشتری / وندور</h3><div class="chart-wrap"><canvas id="chartCompSide"></canvas></div></div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-card"><h3>توزیع گرید (NFC و کنسل)</h3><div class="chart-wrap"><canvas id="chartGrade"></canvas></div></div>
+      <div class="chart-card"><h3>عملکرد ایجنت‌ها (گراس سفارش)</h3><div class="chart-wrap"><canvas id="chartAgent"></canvas></div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title"><h2>۱۰ وندور ضعیف هفته</h2><span class="hint">امتیاز ترکیبی از کنسل٪، مرجوعی٪، شکایت٪ و NFC٪ — «تکرار» یعنی چند هفته اخیر جزو ۱۰ تای ضعیف بوده</span></div>
+    <div class="table-card"><table id="tblBad"><thead></thead><tbody></tbody></table></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title"><h2>عملکرد ایجنت‌ها</h2><span class="hint">روی هر ستون کلیک کن تا مرتب بشه</span></div>
+    <div class="table-card"><table id="tblAgent"><thead></thead><tbody></tbody></table></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title"><h2>نقشه وندورها</h2></div>
+    <div class="map-controls">
+      <label><input type="checkbox" id="mapRadius"> نمایش شعاع پوشش (۲ کیلومتر / ۲.۵ کیلومتر برای پایان‌کار بعد از ۲۳:۰۰)</label>
+      <span><span class="legend-dot" style="background:#17824d"></span> گرید A</span>
+      <span><span class="legend-dot" style="background:#b8790f"></span> گرید B</span>
+      <span><span class="legend-dot" style="background:#b10f2e"></span> گرید C</span>
+      <span><span class="legend-dot" style="background:#9a8a8e"></span> نامشخص</span>
+    </div>
+    <div id="map"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title"><h2>لایو / چرن</h2></div>
+    <div class="lc-grid" id="lcCards"></div>
+    <div class="chart-row">
+      <div class="table-card"><h3 style="margin-top:0">وندورهای تازه چرن‌شده</h3><div class="lc-list" id="lcChurnList"></div></div>
+      <div class="table-card"><h3 style="margin-top:0">وندورهای تازه فعال‌شده</h3><div class="lc-list" id="lcLiveList"></div></div>
+    </div>
+  </div>
+
+  <footer>ساخته‌شده برای OKALA — منبع دیتا: گوگل‌شیت «گزارش ویکلی برای دشبورد» (فقط‌خواندنی، زنده)</footer>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+/* =========================================================================
+   CONFIG — تنها چیزی که باید عوض کنی اگه شیت یا تب‌ها تغییر کرد
+   ========================================================================= */
+const CONFIG = {
+  SHEET_ID: '1ICLh-qF-zS9Wsbmb2EZN4bY4wMl4I8NBdkxC3u3GQqk',
+  SHEETS: {
+    finalData: 'final data',
+    liveChurn: 'live & churn'
+  }
+};
+function gvizUrl(sheetName){
+  const base = `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq`;
+  const params = `?tqx=out:csv&sheet=${encodeURIComponent(sheetName)}&_=${Date.now()}`;
+  return base + params;
+}
+
+/* =========================================================================
+   داده خام + وضعیت هر منبع (هیچ خطایی اینجا قورت داده نمی‌شه)
+   ========================================================================= */
+const STATE = {
+  finalData: [],      // آرایه ردیف‌های تب final data (هر ردیف = یک آبجکت با کلید = هدر ستون)
+  liveChurn: [],
+  status: {
+    finalData: { ok:false, error:null, rows:0, loading:true },
+    liveChurn: { ok:false, error:null, rows:0, loading:true }
+  },
+  filters: { week:'', agent:'', area:'', seg:'', live:'', search:'' }
+};
+
+let charts = {}; // instance های Chart.js برای destroy/rebuild
+let map, mapMarkers = [], mapCircles = [];
+
+/* =========================================================================
+   کمکی‌ها
+   ========================================================================= */
+function normHeader(h){ return String(h||'').trim(); }
+
+// دقیقاً برابرِ نام ستون رو پیدا می‌کنه — substring match ممنوع
+// (باگ قبلی همین‌جا بود: ID با VendorSide قاطی می‌شد)
+function col(row, exactName){
+  return row[exactName];
+}
+
+function toNumber(v){
+  if(v===null || v===undefined) return null;
+  if(typeof v === 'number') return isFinite(v) ? v : null;
+  let s = String(v).trim();
+  if(s==='' ) return null;
+  if(/^#(DIV\/0!|N\/A|NAME\?|REF!|VALUE!|NULL!)$/i.test(s)) return null;
+  s = s.replace(/%/g,'').replace(/,/g,'').trim();
+  const n = parseFloat(s);
+  return isFinite(n) ? n : null;
+}
+
+function weekNum(w){
+  const m = String(w||'').match(/(\d+)/);
+  return m ? parseInt(m[1],10) : -1;
+}
+
+function pct(numerator, denominator){
+  if(!denominator) return null;
+  return (numerator/denominator)*100;
+}
+
+function fmtPct(v){ return v===null||v===undefined||isNaN(v) ? '—' : v.toFixed(1)+'٪'; }
+function fmtInt(v){ return v===null||v===undefined||isNaN(v) ? '—' : Math.round(v).toLocaleString('en-US'); }
+
+function parseLatLong(s){
+  if(!s) return null;
+  const parts = String(s).split(/[,\s\/]+/).map(x=>parseFloat(x)).filter(x=>isFinite(x));
+  if(parts.length>=2) return {lat:parts[0], lng:parts[1]};
+  return null;
+}
+
+function parseEndTimeAfter23(s){
+  if(!s) return false;
+  const str = String(s);
+  const m = str.match(/(\d{1,2}):(\d{2})/);
+  if(m){ return parseInt(m[1],10) >= 23; }
+  const n = toNumber(str); // اکسل گاهی ساعت رو کسر روز ذخیره می‌کنه
+  if(n!==null && n<1){ return (n*24) >= 23; }
+  return false;
+}
+
+function gradeClass(g){
+  const s = String(g||'').trim().toUpperCase();
+  if(s.startsWith('A')) return 'g-A';
+  if(s.startsWith('B')) return 'g-B';
+  if(s.startsWith('C')) return 'g-C';
+  return 'g-x';
+}
+function gradeColor(g){
+  const s = String(g||'').trim().toUpperCase();
+  if(s.startsWith('A')) return '#17824d';
+  if(s.startsWith('B')) return '#b8790f';
+  if(s.startsWith('C')) return '#b10f2e';
+  return '#9a8a8e';
+}
+
+/* =========================================================================
+   فچ و پارس یک تب از شیت — با خطای شفاف، بدون قورت‌دادن ساکت
+   ========================================================================= */
+async function fetchSheetTab(sheetName){
+  const url = gvizUrl(sheetName);
+  const res = await fetch(url, { cache: 'no-store' });
+  if(!res.ok){
+    throw new Error(`HTTP ${res.status} در خواندن تب «${sheetName}» — احتمالاً Share شیت درست تنظیم نشده یا نام تب عوض شده`);
+  }
+  const text = await res.text();
+  if(/^\s*<!DOCTYPE|^\s*<html/i.test(text)){
+    throw new Error(`تب «${sheetName}» به‌جای CSV یک صفحه HTML برگردوند — یعنی شیت عمومی/Viewer نیست یا نام تب اشتباهه`);
+  }
+  const parsed = Papa.parse(text, { header:true, skipEmptyLines:true, transformHeader: normHeader });
+  if(parsed.errors && parsed.errors.length){
+    console.warn('Papa parse warnings for', sheetName, parsed.errors);
+  }
+  return parsed.data;
+}
+
+/* =========================================================================
+   بارگذاری کامل — هر منبع مستقل از بقیه لود/فیل می‌شه و در status نشون داده می‌شه
+   ========================================================================= */
+async function loadAll(){
+  const btn = document.getElementById('refreshBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> در حال رفرش…';
+  STATE.status.finalData.loading = true;
+  STATE.status.liveChurn.loading = true;
+  renderStatusBar();
+
+  const [fd, lc] = await Promise.allSettled([
+    fetchSheetTab(CONFIG.SHEETS.finalData),
+    fetchSheetTab(CONFIG.SHEETS.liveChurn)
+  ]);
+
+  if(fd.status === 'fulfilled'){
+    STATE.finalData = fd.value;
+    STATE.status.finalData = { ok:true, error:null, rows:fd.value.length, loading:false };
+  } else {
+    STATE.finalData = [];
+    STATE.status.finalData = { ok:false, error: fd.reason.message, rows:0, loading:false };
+  }
+
+  if(lc.status === 'fulfilled'){
+    STATE.liveChurn = lc.value;
+    STATE.status.liveChurn = { ok:true, error:null, rows:lc.value.length, loading:false };
+  } else {
+    STATE.liveChurn = [];
+    STATE.status.liveChurn = { ok:false, error: lc.reason.message, rows:0, loading:false };
+  }
+
+  renderStatusBar();
+  document.getElementById('updatedAt').textContent = 'آخرین بروزرسانی: ' + new Date().toLocaleString('fa-IR');
+  btn.disabled = false;
+  btn.innerHTML = '🔄 رفرش دیتا';
+
+  if(STATE.status.finalData.ok){
+    populateFilters();
+    renderAll();
+  } else {
+    document.getElementById('kpiCards').innerHTML =
+      `<div class="empty-note">تب اصلی «final data» لود نشد، پس بخش‌های دیگه هم قابل‌محاسبه نیستن. علت دقیق بالا (نوار وضعیت) نوشته شده — لطفاً همون رو رفع کن و دوباره رفرش بزن.</div>`;
+  }
+}
+
+function renderStatusBar(){
+  const bar = document.getElementById('statusBar');
+  function chip(label, st){
+    if(st.loading) return `<div class="status-chip loading"><span class="status-dot"></span> در حال خواندن ${label}…</div>`;
+    if(st.ok) return `<div class="status-chip ok"><span class="status-dot"></span> ${label}: <b>${st.rows.toLocaleString('en-US')}</b> ردیف</div>`;
+    return `<div class="status-chip err"><span class="status-dot"></span> ${label}: <span class="err-detail">${st.error}</span></div>`;
+  }
+  bar.innerHTML = chip('final data', STATE.status.finalData) + chip('live & churn', STATE.status.liveChurn);
+}
+
+/* =========================================================================
+   فیلترها
+   ========================================================================= */
+function uniqueSorted(arr){ return [...new Set(arr.filter(x=>x!==undefined && x!==null && x!==''))].sort(); }
+
+function populateFilters(){
+  const weeks = uniqueSorted(STATE.finalData.map(r=>col(r,'Week'))).sort((a,b)=>weekNum(a)-weekNum(b));
+  const agents = uniqueSorted(STATE.finalData.map(r=>col(r,'Agent')));
+  const areas = uniqueSorted(STATE.finalData.map(r=>col(r,'marketing area')));
+  const segs = uniqueSorted(STATE.finalData.map(r=>col(r,'segmentation')));
+
+  const fWeek = document.getElementById('fWeek');
+  const prevWeek = fWeek.value;
+  fWeek.innerHTML = weeks.map(w=>`<option value="${w}">${w}</option>`).join('');
+  fWeek.value = weeks.includes(prevWeek) ? prevWeek : weeks[weeks.length-1];
+
+  fillSelect('fAgent', agents);
+  fillSelect('fArea', areas);
+  fillSelect('fSeg', segs);
+}
+function fillSelect(id, values){
+  const el = document.getElementById(id);
+  const prev = el.value;
+  el.innerHTML = `<option value="">همه</option>` + values.map(v=>`<option value="${v}">${v}</option>`).join('');
+  el.value = values.includes(prev) ? prev : '';
+}
+
+['fWeek','fAgent','fArea','fSeg','fLive'].forEach(id=>{
+  document.addEventListener('DOMContentLoaded', ()=>{
+    document.getElementById(id).addEventListener('change', ()=>{ readFilters(); renderAll(); });
+  });
+});
+document.addEventListener('DOMContentLoaded', ()=>{
+  document.getElementById('fSearch').addEventListener('input', ()=>{ readFilters(); renderAll(); });
+});
+function readFilters(){
+  STATE.filters = {
+    week: document.getElementById('fWeek').value,
+    agent: document.getElementById('fAgent').value,
+    area: document.getElementById('fArea').value,
+    seg: document.getElementById('fSeg').value,
+    live: document.getElementById('fLive').value,
+    search: document.getElementById('fSearch').value.trim().toLowerCase()
+  };
+}
+
+function applyRowFilters(rows, {ignoreWeek=false}={}){
+  const f = STATE.filters;
+  return rows.filter(r=>{
+    if(!ignoreWeek && f.week && col(r,'Week')!==f.week) return false;
+    if(f.agent && col(r,'Agent')!==f.agent) return false;
+    if(f.area && col(r,'marketing area')!==f.area) return false;
+    if(f.seg && col(r,'segmentation')!==f.seg) return false;
+    if(f.live==='live' && String(col(r,'Live?')).trim()!=='1' && !/^(true|yes|بله|فعال)$/i.test(String(col(r,'Live?')||'').trim())) {
+      // ستون Live? ممکنه 0/1، TRUE/FALSE یا متن فارسی باشه — این چک منعطفه
+      if(!isTruthyLive(col(r,'Live?'))) return false;
+    }
+    if(f.live==='churn' && isTruthyLive(col(r,'Live?'))) return false;
+    if(f.search && !String(col(r,'Vendor')||'').toLowerCase().includes(f.search)) return false;
+    return true;
+  });
+}
+function isTruthyLive(v){
+  const s = String(v===undefined||v===null?'':v).trim().toLowerCase();
+  return s==='1' || s==='true' || s==='yes' || s==='بله' || s==='فعال' || s==='live';
+}
+
+/* =========================================================================
+   رندر همه‌چیز
+   ========================================================================= */
+function renderAll(){
+  renderKPIs();
+  renderTrendCharts();
+  renderSideCharts();
+  renderGradeAndAgentCharts();
+  renderBadVendors();
+  renderAgentTable();
+  renderMap();
+  renderLiveChurn();
+}
+
+/* ---- KPI ---- */
+function renderKPIs(){
+  const rows = applyRowFilters(STATE.finalData);
+  document.getElementById('kpiHint').textContent = `${rows.length.toLocaleString('en-US')} وندور در فیلتر فعلی`;
+
+  const sum = key => rows.reduce((a,r)=> a + (toNumber(col(r,key))||0), 0);
+  const gross = sum('Gross Order');
+  const delivered = sum('Delivered Orders');
+  const cancelled = sum('Cancelled Orders');
+  const returned = sum('Returned Orders');
+  const nfcOrders = sum('NFC Orders');
+  const delayed = sum('Delayed Orders (>10 mins)');
+  const compOrders = sum('Compensation (Vendor Side)');
+
+  const kpis = [
+    {name:'گراس سفارش', value: fmtInt(gross), sub:`تحویل‌شده: ${fmtInt(delivered)}`, cls:''},
+    {name:'OSR٪', value: fmtPct(pct(delivered,gross)), sub:'تحویل / گراس', cls:''},
+    {name:'کنسل٪', value: fmtPct(pct(cancelled,gross)), sub:`${fmtInt(cancelled)} سفارش`, cls: pctWarnClass(pct(cancelled,gross),10)},
+    {name:'مرجوعی٪', value: fmtPct(pct(returned,gross)), sub:`${fmtInt(returned)} سفارش`, cls: pctWarnClass(pct(returned,gross),5)},
+    {name:'NFC٪', value: fmtPct(pct(nfcOrders,gross)), sub:`${fmtInt(nfcOrders)} سفارش`, cls: pctWarnClass(pct(nfcOrders,gross),5)},
+    {name:'شکایت٪ (وندور)', value: fmtPct(pct(compOrders,gross)), sub:`${fmtInt(compOrders)} سفارش`, cls: pctWarnClass(pct(compOrders,gross),2)},
+    {name:'تأخیر > ۱۰ دقیقه٪', value: fmtPct(pct(delayed,gross)), sub:`${fmtInt(delayed)} سفارش`, cls:''},
+    {name:'تعداد وندور فعال', value: fmtInt(rows.filter(r=>isTruthyLive(col(r,'Live?'))).length), sub:'در فیلتر فعلی', cls:'good'},
+    {name:'میانگین اسورتمنت', value: fmtInt(avg(rows.map(r=>toNumber(col(r,'Assortment'))))), sub:'تعداد بارکد', cls:''},
+    {name:'میانگین قیمت قابل‌فروش', value: fmtInt(avg(rows.map(r=>toNumber(col(r,'Order Sellabale Price'))))), sub:'تومان', cls:''},
+    {name:'گرید NFC = C', value: fmtInt(rows.filter(r=>gradeClass(col(r,'Grade NFC'))==='g-C').length), sub:'تعداد وندور', cls:'warn'},
+    {name:'گرید کنسل = C', value: fmtInt(rows.filter(r=>gradeClass(col(r,'Grade Cancel'))==='g-C').length), sub:'تعداد وندور', cls:'warn'},
+  ];
+  document.getElementById('kpiCards').innerHTML = kpis.map(k=>`
+    <div class="card kpi ${k.cls}">
+      <div class="name">${k.name}</div>
+      <div class="value">${k.value}</div>
+      <div class="sub">${k.sub}</div>
+    </div>`).join('');
+}
+function avg(arr){ const a=arr.filter(x=>x!==null && !isNaN(x)); return a.length? a.reduce((x,y)=>x+y,0)/a.length : null; }
+function pctWarnClass(v, threshold){ if(v===null) return ''; return v>threshold ? 'warn' : 'good'; }
+
+/* ---- روند هفتگی ---- */
+function weeklySeries(){
+  const byWeek = {};
+  applyRowFilters(STATE.finalData, {ignoreWeek:true}).forEach(r=>{
+    const w = col(r,'Week');
+    if(!byWeek[w]) byWeek[w] = { gross:0, delivered:0, cancelled:0, returned:0, nfc:0, comp:0 };
+    byWeek[w].gross += toNumber(col(r,'Gross Order'))||0;
+    byWeek[w].delivered += toNumber(col(r,'Delivered Orders'))||0;
+    byWeek[w].cancelled += toNumber(col(r,'Cancelled Orders'))||0;
+    byWeek[w].returned += toNumber(col(r,'Returned Orders'))||0;
+    byWeek[w].nfc += toNumber(col(r,'NFC Orders'))||0;
+    byWeek[w].comp += toNumber(col(r,'Compensation (Vendor Side)'))||0;
+  });
+  const weeks = Object.keys(byWeek).sort((a,b)=>weekNum(a)-weekNum(b));
+  return { weeks, byWeek };
+}
+
+function renderTrendCharts(){
+  const { weeks, byWeek } = weeklySeries();
+  const gross = weeks.map(w=>byWeek[w].gross);
+  const osr = weeks.map(w=>pct(byWeek[w].delivered, byWeek[w].gross));
+  const cancelR = weeks.map(w=>pct(byWeek[w].cancelled, byWeek[w].gross));
+  const returnR = weeks.map(w=>pct(byWeek[w].returned, byWeek[w].gross));
+  const nfcR = weeks.map(w=>pct(byWeek[w].nfc, byWeek[w].gross));
+  const compR = weeks.map(w=>pct(byWeek[w].comp, byWeek[w].gross));
+
+  upsertChart('chartTrendGross', 'bar', {
+    labels: weeks,
+    datasets: [
+      {type:'bar', label:'گراس سفارش', data:gross, backgroundColor:'#e8b6c0', order:2, yAxisID:'y'},
+      {type:'line', label:'OSR٪', data:osr, borderColor:'#b10f2e', backgroundColor:'#b10f2e', tension:.3, order:1, yAxisID:'y1'}
+    ]
+  }, {
+    scales:{ y:{position:'left', title:{display:true,text:'گراس سفارش'}}, y1:{position:'right', title:{display:true,text:'OSR٪'}, grid:{drawOnChartArea:false}} }
+  });
+
+  upsertChart('chartTrendRates', 'line', {
+    labels: weeks,
+    datasets: [
+      {label:'کنسل٪', data:cancelR, borderColor:'#b10f2e', tension:.3},
+      {label:'مرجوعی٪', data:returnR, borderColor:'#b8790f', tension:.3},
+      {label:'NFC٪', data:nfcR, borderColor:'#7c3aed', tension:.3},
+      {label:'شکایت٪', data:compR, borderColor:'#0f7ab1', tension:.3},
+    ]
+  }, {});
+}
+
+/* ---- تفکیک مسئولیت ---- */
+function renderSideCharts(){
+  const rows = applyRowFilters(STATE.finalData);
+  const s = key => rows.reduce((a,r)=> a + (toNumber(col(r,key))||0), 0);
+
+  upsertChart('chartCancelSide','doughnut',{
+    labels:['لجستیک','اوکالا','مشتری'],
+    datasets:[{data:[s('cancel logistic side'), s('cancel okala side'), s('cancel customer side')],
+      backgroundColor:['#b10f2e','#e23d57','#f2a5b3']}]
+  },{});
+
+  upsertChart('chartReturnSide','doughnut',{
+    labels:['لجستیک','اوکالا','مشتری','وندور'],
+    datasets:[{data:[s('return logistic side'), s('return okala side'), s('return customer side'), s('return vendor side')],
+      backgroundColor:['#b8790f','#d99a2b','#efc27a','#f7ddab']}]
+  },{});
+
+  upsertChart('chartCompSide','doughnut',{
+    labels:['لجستیک','اوکالا','مشتری','وندور'],
+    datasets:[{data:[s('compensation logistic side'), s('compensation okala side'), s('compensation customer side'), s('compensation vendor side')],
+      backgroundColor:['#0f7ab1','#3ea0d6','#8cc7e8','#c9e5f5']}]
+  },{});
+}
+
+/* ---- گرید و ایجنت ---- */
+function renderGradeAndAgentCharts(){
+  const rows = applyRowFilters(STATE.finalData);
+  const gradeCount = (key) => {
+    const m = {};
+    rows.forEach(r=>{ const g = String(col(r,key)||'نامشخص').trim() || 'نامشخص'; m[g]=(m[g]||0)+1; });
+    return m;
+  };
+  const nfcG = gradeCount('Grade NFC'), cancelG = gradeCount('Grade Cancel');
+  const labels = uniqueSorted([...Object.keys(nfcG), ...Object.keys(cancelG)]);
+  upsertChart('chartGrade','bar',{
+    labels,
+    datasets:[
+      {label:'گرید NFC', data: labels.map(l=>nfcG[l]||0), backgroundColor:'#b10f2e'},
+      {label:'گرید کنسل', data: labels.map(l=>cancelG[l]||0), backgroundColor:'#0f7ab1'},
+    ]
+  },{});
+
+  const byAgent = {};
+  rows.forEach(r=>{
+    const a = col(r,'Agent') || 'نامشخص';
+    byAgent[a] = (byAgent[a]||0) + (toNumber(col(r,'Gross Order'))||0);
+  });
+  const agents = Object.keys(byAgent).sort((x,y)=>byAgent[y]-byAgent[x]);
+  upsertChart('chartAgent','bar',{
+    labels: agents,
+    datasets:[{label:'گراس سفارش', data: agents.map(a=>byAgent[a]), backgroundColor:'#8c0925'}]
+  },{ indexAxis:'y' });
+}
+
+function upsertChart(canvasId, type, data, extraOptions){
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  if(charts[canvasId]) charts[canvasId].destroy();
+  charts[canvasId] = new Chart(ctx, {
+    type, data,
+    options: Object.assign({ responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom'}} }, extraOptions||{})
+  });
+}
+
+/* ---- ۱۰ وندور ضعیف ---- */
+function compositeScore(r){
+  const gross = toNumber(col(r,'Gross Order'))||0;
+  const cancelPct = toNumber(col(r,'%Cancelled')) ?? pct(toNumber(col(r,'Cancelled Orders')), gross) ?? 0;
+  const returnPct = toNumber(col(r,'%Returned')) ?? pct(toNumber(col(r,'Returned Orders')), gross) ?? 0;
+  const compPct = toNumber(col(r,'%Compensation (Vendor Side)')) ?? pct(toNumber(col(r,'Compensation (Vendor Side)')), gross) ?? 0;
+  const nfcPct = toNumber(col(r,'NFC %')) ?? pct(toNumber(col(r,'NFC Orders')), gross) ?? 0;
+  return cancelPct*0.35 + returnPct*0.25 + compPct*0.25 + nfcPct*0.15;
+}
+
+function renderBadVendors(){
+  const rows = applyRowFilters(STATE.finalData).filter(r=> (toNumber(col(r,'Gross Order'))||0) > 0);
+  const scored = rows.map(r=>({ r, score: compositeScore(r) })).sort((a,b)=>b.score-a.score).slice(0,10);
+
+  // شمارش تکرار در N هفته اخیر (حداکثر ۴ هفته قبل از هفته انتخاب‌شده)
+  const { weeks } = weeklySeries();
+  const curIdx = weeks.indexOf(STATE.filters.week);
+  const lastWeeks = curIdx>=0 ? weeks.slice(Math.max(0,curIdx-3), curIdx+1) : [STATE.filters.week];
+  function repeatCount(vendorId){
+    let c=0;
+    lastWeeks.forEach(w=>{
+      const wr = STATE.finalData.filter(r=>col(r,'Week')===w && (toNumber(col(r,'Gross Order'))||0)>0);
+      const wScored = wr.map(r=>({r,score:compositeScore(r)})).sort((a,b)=>b.score-a.score).slice(0,10);
+      if(wScored.some(x=>col(x.r,'ID')===vendorId)) c++;
+    });
+    return c;
+  }
+
+  const thead = `<tr>
+    <th>مارکت</th><th>ایجنت</th><th>گراس سفارش</th><th>کنسل٪</th><th>مرجوعی٪</th>
+    <th>شکایت٪</th><th>NFC٪</th><th>گرید کنسل</th><th>گرید NFC</th><th>تکرار (۴ هفته)</th>
+  </tr>`;
+  const tbody = scored.map(({r})=>{
+    const gross = toNumber(col(r,'Gross Order'))||0;
+    const id = col(r,'ID');
+    const rc = repeatCount(id);
+    return `<tr>
+      <td class="name">${col(r,'Vendor')||'—'}</td>
+      <td>${col(r,'Agent')||'—'}</td>
+      <td>${fmtInt(gross)}</td>
+      <td>${fmtPct(toNumber(col(r,'%Cancelled')) ?? pct(toNumber(col(r,'Cancelled Orders')),gross))}</td>
+      <td>${fmtPct(toNumber(col(r,'%Returned')) ?? pct(toNumber(col(r,'Returned Orders')),gross))}</td>
+      <td>${fmtPct(toNumber(col(r,'%Compensation (Vendor Side)')) ?? pct(toNumber(col(r,'Compensation (Vendor Side)')),gross))}</td>
+      <td>${fmtPct(toNumber(col(r,'NFC %')) ?? pct(toNumber(col(r,'NFC Orders')),gross))}</td>
+      <td><span class="badge ${gradeClass(col(r,'Grade Cancel'))}">${col(r,'Grade Cancel')||'—'}</span></td>
+      <td><span class="badge ${gradeClass(col(r,'Grade NFC'))}">${col(r,'Grade NFC')||'—'}</span></td>
+      <td>${rc>1? `<span class="repeat-flag">${rc} هفته</span>` : rc+' هفته'}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('tblBad').querySelector('thead').innerHTML = thead;
+  document.getElementById('tblBad').querySelector('tbody').innerHTML = tbody || `<tr><td colspan="10" class="empty-note">دیتایی برای این فیلتر نیست</td></tr>`;
+}
+
+/* ---- جدول عملکرد ایجنت ---- */
+let agentSort = { key:'gross', dir:-1 };
+function renderAgentTable(){
+  const rows = applyRowFilters(STATE.finalData);
+  const byAgent = {};
+  rows.forEach(r=>{
+    const a = col(r,'Agent') || 'نامشخص';
+    if(!byAgent[a]) byAgent[a] = { agent:a, gross:0, cancelled:0, returned:0, comp:0, nfc:0, vendors:0 };
+    byAgent[a].gross += toNumber(col(r,'Gross Order'))||0;
+    byAgent[a].cancelled += toNumber(col(r,'Cancelled Orders'))||0;
+    byAgent[a].returned += toNumber(col(r,'Returned Orders'))||0;
+    byAgent[a].comp += toNumber(col(r,'Compensation (Vendor Side)'))||0;
+    byAgent[a].nfc += toNumber(col(r,'NFC Orders'))||0;
+    byAgent[a].vendors += 1;
+  });
+  let list = Object.values(byAgent).map(a=>({
+    ...a,
+    cancelPct: pct(a.cancelled, a.gross),
+    returnPct: pct(a.returned, a.gross),
+    compPct: pct(a.comp, a.gross),
+    nfcPct: pct(a.nfc, a.gross)
+  }));
+  list.sort((x,y)=> (x[agentSort.key]-y[agentSort.key]) * agentSort.dir);
+
+  const total = list.reduce((acc,a)=>{
+    acc.gross+=a.gross; acc.cancelled+=a.cancelled; acc.returned+=a.returned; acc.comp+=a.comp; acc.nfc+=a.nfc; acc.vendors+=a.vendors;
+    return acc;
+  }, {gross:0,cancelled:0,returned:0,comp:0,nfc:0,vendors:0});
+
+  const cols = [
+    {k:'agent',l:'ایجنت'},{k:'vendors',l:'تعداد وندور'},{k:'gross',l:'گراس سفارش'},
+    {k:'cancelPct',l:'کنسل٪'},{k:'returnPct',l:'مرجوعی٪'},{k:'compPct',l:'شکایت٪'},{k:'nfcPct',l:'NFC٪'}
+  ];
+  const thead = `<tr>${cols.map(c=>`<th data-key="${c.k}" class="${agentSort.key===c.k?(agentSort.dir===1?'sort-asc':'sort-desc'):''}">${c.l}</th>`).join('')}</tr>`;
+  const rowsHtml = list.map(a=>`<tr>
+    <td class="name">${a.agent}</td><td>${fmtInt(a.vendors)}</td><td>${fmtInt(a.gross)}</td>
+    <td>${fmtPct(a.cancelPct)}</td><td>${fmtPct(a.returnPct)}</td><td>${fmtPct(a.compPct)}</td><td>${fmtPct(a.nfcPct)}</td>
+  </tr>`).join('');
+  const totalHtml = `<tr style="font-weight:900;background:#faf7f8">
+    <td class="name">جمع کل</td><td>${fmtInt(total.vendors)}</td><td>${fmtInt(total.gross)}</td>
+    <td>${fmtPct(pct(total.cancelled,total.gross))}</td><td>${fmtPct(pct(total.returned,total.gross))}</td>
+    <td>${fmtPct(pct(total.comp,total.gross))}</td><td>${fmtPct(pct(total.nfc,total.gross))}</td>
+  </tr>`;
+
+  const table = document.getElementById('tblAgent');
+  table.querySelector('thead').innerHTML = thead;
+  table.querySelector('tbody').innerHTML = (rowsHtml || `<tr><td colspan="7" class="empty-note">دیتایی نیست</td></tr>`) + totalHtml;
+  table.querySelectorAll('th[data-key]').forEach(th=>{
+    th.onclick = ()=>{
+      const k = th.dataset.key;
+      if(agentSort.key===k) agentSort.dir *= -1; else { agentSort.key=k; agentSort.dir=-1; }
+      renderAgentTable();
+    };
+  });
+}
+
+/* ---- نقشه ---- */
+function initMap(){
+  map = L.map('map').setView([35.7219, 51.3347], 11); // تهران
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution:'&copy; OpenStreetMap contributors', maxZoom:19
+  }).addTo(map);
+  document.getElementById('mapRadius').addEventListener('change', renderMap);
+}
+function renderMap(){
+  if(!map) return;
+  mapMarkers.forEach(m=>map.removeLayer(m)); mapMarkers=[];
+  mapCircles.forEach(c=>map.removeLayer(c)); mapCircles=[];
+
+  const rows = applyRowFilters(STATE.finalData);
+  const showRadius = document.getElementById('mapRadius').checked;
+  const bounds = [];
+
+  rows.forEach(r=>{
+    const ll = parseLatLong(col(r,'lat & long'));
+    if(!ll) return;
+    const color = gradeColor(col(r,'Grade Cancel') || col(r,'Grade NFC'));
+    const marker = L.circleMarker([ll.lat, ll.lng], {
+      radius:7, color:'#fff', weight:1.5, fillColor:color, fillOpacity:.9
+    }).addTo(map);
+    const gross = toNumber(col(r,'Gross Order'))||0;
+    marker.bindPopup(`
+      <b>${col(r,'Vendor')||'—'}</b><br>
+      ایجنت: ${col(r,'Agent')||'—'}<br>
+      گراس سفارش: ${fmtInt(gross)}<br>
+      کنسل٪: ${fmtPct(toNumber(col(r,'%Cancelled'))??pct(toNumber(col(r,'Cancelled Orders')),gross))}<br>
+      مرجوعی٪: ${fmtPct(toNumber(col(r,'%Returned'))??pct(toNumber(col(r,'Returned Orders')),gross))}<br>
+      گرید کنسل: ${col(r,'Grade Cancel')||'—'} | گرید NFC: ${col(r,'Grade NFC')||'—'}
+    `);
+    mapMarkers.push(marker);
+    bounds.push([ll.lat, ll.lng]);
+
+    if(showRadius){
+      const radiusM = parseEndTimeAfter23(col(r,'end time')) ? 2500 : 2000;
+      const circle = L.circle([ll.lat, ll.lng], { radius:radiusM, color, weight:1, fillOpacity:.05 }).addTo(map);
+      mapCircles.push(circle);
+    }
+  });
+
+  if(bounds.length) map.fitBounds(bounds, { padding:[30,30], maxZoom:13 });
+}
+
+/* ---- لایو/چرن ---- */
+function renderLiveChurn(){
+  const rows = STATE.liveChurn;
+  if(!rows.length){
+    document.getElementById('lcCards').innerHTML = `<div class="empty-note">تب «live & churn» لود نشد یا خالیه — به نوار وضعیت بالا نگاه کن</div>`;
+    document.getElementById('lcChurnList').innerHTML = '';
+    document.getElementById('lcLiveList').innerHTML = '';
+    return;
+  }
+  const isLive = r => /^(active|live|فعال)/i.test(String(col(r,'Status')||'').trim());
+  const liveRows = rows.filter(isLive);
+  const churnRows = rows.filter(r=>!isLive(r) && col(r,'Churn date'));
+
+  document.getElementById('lcCards').innerHTML = `
+    <div class="card kpi good"><div class="name">وندور فعال</div><div class="value">${fmtInt(liveRows.length)}</div></div>
+    <div class="card kpi warn"><div class="name">وندور چرن‌شده</div><div class="value">${fmtInt(churnRows.length)}</div></div>
+    <div class="card kpi"><div class="name">کل ردیف‌های این تب</div><div class="value">${fmtInt(rows.length)}</div></div>
+    <div class="card kpi"><div class="name">نرخ چرن</div><div class="value">${fmtPct(pct(churnRows.length, rows.length))}</div></div>
+  `;
+
+  const churnSorted = [...churnRows].sort((a,b)=> String(col(b,'Churn date')||'').localeCompare(String(col(a,'Churn date')||''))).slice(0,25);
+  document.getElementById('lcChurnList').innerHTML = churnSorted.length ? `<table><tbody>${churnSorted.map(r=>`
+    <tr><td class="name">${col(r,'Vendor Name')||'—'}</td><td>${col(r,'Churn date')||'—'}</td><td>${col(r,'churn Reason')||'—'}</td></tr>
+  `).join('')}</tbody></table>` : `<div class="empty-note">موردی نیست</div>`;
+
+  const liveSorted = [...liveRows].sort((a,b)=> String(col(b,'Activation Date')||'').localeCompare(String(col(a,'Activation Date')||''))).slice(0,25);
+  document.getElementById('lcLiveList').innerHTML = liveSorted.length ? `<table><tbody>${liveSorted.map(r=>`
+    <tr><td class="name">${col(r,'Vendor Name')||'—'}</td><td>${col(r,'Activation Date')||'—'}</td><td>${col(r,'agent')||'—'}</td></tr>
+  `).join('')}</tbody></table>` : `<div class="empty-note">موردی نیست</div>`;
+}
+
+/* =========================================================================
+   شروع
+   ========================================================================= */
+document.addEventListener('DOMContentLoaded', ()=>{
+  initMap();
+  loadAll();
+});
+</script>
+</body>
+</html>
